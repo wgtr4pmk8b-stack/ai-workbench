@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#7a9b76">
+<title>AI 工作台</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#f5f6f8; --card:#fff; --border:#e8e8eb; --text:#1f2937; --sub:#9ca3af;
+  --accent:#7a9b76; --accent-soft:#e8f0e7; --accent-dark:#5e7e5b;
+  --xhs:#ff2442; --xhs-soft:#fff1f3; --dy:#161823; --dy-soft:#f3f4f6;
+  --amber:#f59e0b; --amber-soft:#fef3c7; --red:#ef4444; --red-soft:#fee2e2;
+  --blue:#3b82f6; --blue-soft:#dbeafe; --purple:#8b5cf6; --purple-soft:#f3eafe;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; font-size:14px; }
+input,textarea,button,select { font-family:inherit; font-size:inherit; color:inherit; }
+input:focus,textarea:focus,select:focus { outline:none; }
+img { display:block; max-width:100%; }
+button { cursor:pointer; }
+
+.app { display:flex; min-height:100vh; }
+
+/* 侧边栏 - 常驻显示 */
+.sidebar {
+  width:90px; background:#fff; border-right:1px solid var(--border);
+  padding:16px 6px; flex-shrink:0; display:flex; flex-direction:column; gap:4px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand { display:flex; align-items:center; justify-content:center; padding:8px 0 14px; border-bottom:1px solid var(--border); margin-bottom:10px; }
+.brand-logo { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#a8c4a4,#fbcfe8); display:flex; align-items:center; justify-content:center; font-size:18px; }
+.nav-title { font-size:10px; color:var(--sub); padding:8px 4px 2px; text-align:center; }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; border-radius:8px; cursor:pointer; font-size:10px; color:var(--text); position:relative; }
+.nav-item:active { background:var(--accent-soft); }
+.nav-item.on { background:var(--accent-soft); color:var(--accent-dark); font-weight:600; }
+.nav-item.on::before { content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width:3px; height:20px; background:var(--accent); border-radius:0 2px 2px 0; }
+.nav-icon { font-size:20px; }
+.nav-del { position:absolute; top:2px; right:2px; color:var(--red); font-size:10px; opacity:.5; border:none; background:none; cursor:pointer; }
+
+.main { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+/* 顶栏 - 头像 + 名字 + 日期 */
+.topbar { background:#fff; border-bottom:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#a8c4a4,#fbcfe8); display:flex; align-items:center; justify-content:center; font-size:22px; overflow:hidden; }
+.avatar img { width:100%; height:100%; object-fit:cover; }
+.topbar-info { display:flex; flex-direction:column; }
+.topbar-name { font-size:15px; font-weight:700; color:var(--accent-dark); }
+.topbar-date { font-size:11px; color:var(--sub); }
+.refresh-btn { display:flex; align-items:center; gap:4px; padding:6px 14px; border-radius:14px; background:var(--accent-soft); color:var(--accent-dark); font-size:11px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+.refresh-btn:active { background:var(--accent); color:#fff; }
+
+.content { padding:16px 20px; display:flex; flex-direction:column; gap:14px; flex:1; }
+.page { display:none; flex-direction:column; gap:14px; }
+.page.active { display:flex; }
+
+.card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px; }
+.card-head { display:flex; align-items:center; justify-content:space-between; }
+.card-title { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.card-icon { width:28px; height:28px; border-radius:8px; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:16px; }
+.tag { font-size:10px; padding:2px 8px; border-radius:10px; }
+
+/* 首页总览 */
+.overview-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.ov-card { border:1px solid var(--border); border-radius:12px; padding:14px; background:#fff; cursor:pointer; }
+.ov-card:active { transform:scale(.98); }
+.ov-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:8px; }
+.ov-title { font-size:12px; font-weight:600; }
+.ov-stat { font-size:18px; font-weight:700; color:var(--accent); margin-top:4px; }
+.ov-desc { font-size:10px; color:var(--sub); }
+@media (max-width:900px) { .overview-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ============= 健康 - 体重模块 ============= */
+.weight-goal { display:flex; justify-content:space-between; align-items:center; padding:8px 0; font-size:12px; color:var(--sub); }
+.weight-goal b { color:var(--text); font-weight:500; }
+.weight-num { text-align:center; padding:16px 0 12px; }
+.weight-num .n { font-size:56px; font-weight:700; color:var(--text); }
+.weight-num .u { font-size:16px; color:var(--sub); margin-left:4px; }
+.weight-num .sub { font-size:11px; color:var(--sub); margin-top:4px; }
+.weight-bar { height:8px; background:var(--bg); border-radius:4px; overflow:hidden; margin:8px 0; }
+.weight-bar-fill { height:100%; background:linear-gradient(90deg,#7a9b76,#a8c4a4); transition:width .5s; border-radius:4px; }
+.weight-bar-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--sub); margin-top:4px; }
+.weight-input-row { display:flex; gap:8px; margin-top:12px; }
+.weight-input-row input { flex:1; border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:13px; background:#fff; }
+.btn { padding:11px 18px; border-radius:10px; font-size:13px; border:none; background:var(--accent); color:#fff; font-weight:600; }
+.btn:active { opacity:.8; }
+.btn-sm { padding:6px 12px; border-radius:8px; font-size:11px; border:none; background:var(--accent); color:#fff; }
+
+.guidance { background:var(--amber-soft); border-radius:10px; padding:12px 14px; font-size:12px; color:#92400e; line-height:1.7; }
+
+/* 饮食打卡 */
+.food-library { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.food-item { background:var(--bg); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:2px; }
+.food-item .fn { font-size:13px; font-weight:600; }
+.food-item .fk { font-size:10px; color:var(--sub); }
+
+.checkin-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.checkin-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 4px; text-align:center; cursor:pointer; transition:all .15s; }
+.checkin-card:active { transform:scale(.96); }
+.checkin-card.done { background:var(--accent-soft); border-color:var(--accent); }
+.checkin-card .ci { font-size:24px; margin-bottom:6px; }
+.checkin-card .cn { font-size:11px; font-weight:500; }
+@media (max-width:768px) { .checkin-grid { grid-template-columns:repeat(3,1fr); } }
+
+/* 今日饮食 - 照片显示 */
+.meal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.meal-card { border:1px solid var(--border); border-radius:12px; padding:10px; background:#fff; display:flex; flex-direction:column; gap:6px; }
+.meal-head { display:flex; justify-content:space-between; align-items:center; }
+.meal-card .mt { font-size:11px; color:var(--sub); font-weight:500; }
+.meal-card .mk { font-size:11px; color:var(--accent); font-weight:600; }
+.meal-card .mi { width:100%; aspect-ratio:16/10; border:1px dashed var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--sub); font-size:22px; cursor:pointer; overflow:hidden; position:relative; }
+.meal-card .mi img { width:100%; height:100%; object-fit:cover; }
+.meal-card .mi.has-img { border-style:solid; border-color:transparent; }
+.meal-card .mf { font-size:12px; font-weight:500; min-height:18px; }
+.meal-recog { font-size:10px; color:var(--sub); padding:4px 6px; background:var(--bg); border-radius:6px; }
+
+.kcal-t { display:flex; justify-content:space-between; padding-top:10px; border-top:1px solid var(--border); font-size:13px; font-weight:600; }
+.kcal-t b { color:var(--accent); font-size:18px; }
+
+/* ============= 创作助手 ============= */
+.creator-tabs { display:flex; gap:6px; margin-bottom:10px; }
+.creator-tab { padding:6px 16px; border-radius:16px; font-size:12px; font-weight:500; background:var(--bg); border:1px solid var(--border); cursor:pointer; }
+.creator-tab.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+.creator-tab.on.xhs { background:var(--xhs); border-color:var(--xhs); }
+.creator-tab.on.dy { background:var(--dy); border-color:var(--dy); }
+
+.creator-section { padding:14px; border:1px solid var(--border); border-radius:12px; background:#fff; margin-bottom:10px; }
+.creator-section h4 { font-size:13px; font-weight:600; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+.gen-btn { padding:7px 14px; border-radius:14px; font-size:11px; background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:500; }
+.gen-btn:active { opacity:.8; }
+
+.topic-list { display:flex; flex-direction:column; gap:6px; }
+.topic-item { padding:10px 12px; background:var(--bg); border-radius:10px; font-size:12px; display:flex; justify-content:space-between; align-items:center; }
+.topic-item .tt { flex:1; }
+.topic-item .tags { display:flex; gap:4px; margin-left:8px; }
+.topic-tag { font-size:9px; padding:2px 6px; border-radius:5px; background:var(--green-soft); color:var(--accent-dark); }
+.topic-tag.xhs { background:var(--xhs-soft); color:var(--xhs); }
+.topic-tag.dy { background:var(--dy-soft); color:var(--dy); }
+.topic-tag.status { background:var(--accent-soft); }
+.topic-actions { display:flex; gap:6px; margin-left:6px; }
+.topic-act { width:24px; height:24px; border-radius:50%; background:#fff; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--sub); cursor:pointer; }
+.topic-act:active { background:var(--accent-soft); }
+
+.script-input { border:1px solid var(--border); border-radius:10px; padding:10px; font-size:12px; resize:vertical; min-height:50px; width:100%; margin-bottom:8px; background:#fff; }
+.script-btn { width:100%; padding:13px; border-radius:22px; background:var(--accent); color:#fff; border:none; cursor:pointer; font-size:13px; font-weight:500; }
+.script-btn:active { opacity:.8; }
+
+.publish-list { display:flex; flex-direction:column; gap:8px; }
+.publish-item { padding:10px 12px; background:var(--bg); border-radius:10px; font-size:12px; display:flex; align-items:center; gap:10px; }
+.publish-date { font-size:11px; color:var(--sub); }
+.publish-item .pub-title { flex:1; }
+.publish-status { font-size:9px; padding:2px 6px; border-radius:5px; background:var(--amber-soft); color:var(--amber); }
+
+.add-manual { border:1px dashed var(--border); border-radius:10px; padding:10px; text-align:center; color:var(--sub); font-size:12px; cursor:pointer; background:#fff; }
+.add-manual:active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+/* 库存 */
+.ss { display:flex; gap:6px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:#fff; }
+.ss input { flex:1; border:none; outline:none; font-size:13px; background:transparent; }
+.sl { display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; }
+.si { display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:10px; background:var(--bg); font-size:12px; }
+.si-name { font-weight:500; }
+.si-qty { color:var(--sub); font-size:11px; }
+.si-del { color:var(--red); font-size:16px; cursor:pointer; border:none; background:none; margin-left:4px; }
+.sadd { display:flex; gap:6px; flex-wrap:wrap; }
+.chip { font-size:11px; padding:6px 12px; border-radius:14px; background:var(--bg); border:1px solid var(--border); color:var(--sub); cursor:pointer; }
+.chip:active { background:var(--accent-soft); }
+
+/* 日历 */
+.cal-h { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; }
+.cal-nav { display:flex; gap:8px; }
+.cal-nav span { cursor:pointer; color:var(--sub); font-size:16px; padding:0 4px; }
+.cal-g { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.dow { text-align:center; font-size:10px; color:var(--sub); padding:3px 0; font-weight:500; }
+.cc { aspect-ratio:1; border-radius:6px; background:var(--bg); font-size:11px; color:var(--sub); display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; }
+.cc.today { background:var(--accent); color:#fff; font-weight:700; }
+.cc.has::after { content:""; position:absolute; bottom:3px; width:5px; height:5px; border-radius:50%; background:var(--accent); }
+.cc.today.has::after { background:#fff; }
+.sched-list { display:flex; flex-direction:column; gap:6px; }
+.sched-item { display:flex; gap:8px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:12px; }
+
+/* 衣橱 */
+.cl-g { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.cl-item { aspect-ratio:3/4; border-radius:8px; overflow:hidden; position:relative; border:1px solid var(--border); background:var(--bg); }
+.cl-item img { width:100%; height:100%; object-fit:cover; }
+.cl-del { position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.5); color:#fff; border:none; font-size:12px; }
+.outfit-box { border:1px dashed var(--accent); border-radius:10px; padding:10px; font-size:12px; display:flex; gap:8px; }
+.ai-badge { background:var(--accent); color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; flex-shrink:0; }
+.ai-input { display:flex; gap:6px; align-items:flex-end; border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:#fff; }
+.ai-input textarea { flex:1; border:none; outline:none; font-size:12px; resize:none; min-height:36px; max-height:100px; background:transparent; }
+.ai-send { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11px; }
+
+/* 灵感库 */
+.lib-tabs { display:flex; gap:4px; flex-wrap:wrap; }
+.lib-tab { font-size:11px; padding:4px 10px; border-radius:14px; background:var(--bg); border:1px solid var(--border); color:var(--sub); cursor:pointer; }
+.lib-tab.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+.lib-g { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.lib-item { border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; }
+.lib-item img { width:100%; aspect-ratio:1; object-fit:cover; }
+.lib-text { padding:8px; font-size:11px; min-height:50px; background:var(--bg); }
+.lib-cat { position:absolute; top:4px; left:4px; font-size:9px; padding:2px 6px; border-radius:6px; background:rgba(255,255,255,.9); }
+.lib-del { position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.5); color:#fff; border:none; font-size:12px; }
+
+.btn-add { border:1px dashed var(--border); border-radius:10px; padding:10px; text-align:center; color:var(--sub); font-size:12px; cursor:pointer; background:#fff; }
+.btn-add:active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+.stock-form { display:none; flex-direction:column; gap:8px; }
+.stock-form.show { display:flex; }
+.stock-form input, .stock-form select, .stock-form textarea { border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12px; background:#fff; }
+.lib-type-row { display:flex; gap:6px; }
+.lib-type-btn { flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:#fff; font-size:11px; cursor:pointer; text-align:center; }
+.lib-type-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.history-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:10px; background:var(--bg); font-size:12px; }
+.history-row .d { color:var(--sub); font-size:11px; font-weight:500; }
+.history-row .s { font-size:11px; }
+
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.85); color:#fff; padding:8px 16px; border-radius:8px; font-size:12px; z-index:200; opacity:0; transition:opacity .3s; pointer-events:none; }
+.toast.show { opacity:1; }
+.file-input { display:none; }
+
+@media (max-width:768px) {
+  .sidebar { width:74px; padding:12px 4px; }
+  .nav-item { font-size:9px; padding:8px 2px; }
+  .nav-icon { font-size:18px; }
+  .nav-title { font-size:9px; }
+  .content { padding:12px; }
+  .topbar { padding:10px 12px; }
+  .card { padding:12px; }
+  .meal-grid { grid-template-columns:1fr; }
+  .lib-g { grid-template-columns:repeat(2,1fr); }
+  .cl-g { grid-template-columns:repeat(3,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 侧边栏 - 常驻显示 -->
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-logo">🌸</div></div>
+    <div class="nav-title">工作台</div>
+    <div class="nav-item on" data-page="overview" onclick="showPage('overview')">
+      <div class="nav-icon">🏠</div><span>首页</span>
+    </div>
+    <div class="nav-title">创作</div>
+    <div class="nav-item" data-page="inspiration" onclick="showPage('inspiration')">
+      <div class="nav-icon">💡</div><span>灵感</span>
+    </div>
+    <div class="nav-item" data-page="library" onclick="showPage('library')">
+      <div class="nav-icon">🎨</div><span>灵感库</span>
+    </div>
+    <div class="nav-item" data-page="stock" onclick="showPage('stock')">
+      <div class="nav-icon">📦</div><span>库存</span>
+    </div>
+    <div class="nav-item" data-page="schedule" onclick="showPage('schedule')">
+      <div class="nav-icon">📅</div><span>排期</span>
+    </div>
+    <div class="nav-item" data-page="wardrobe" onclick="showPage('wardrobe')">
+      <div class="nav-icon">👗</div><span>穿搭</span>
+    </div>
+    <div class="nav-title">生活</div>
+    <div class="nav-item" data-page="health" onclick="showPage('health')">
+      <div class="nav-icon">⚖️</div><span>健康</span>
+    </div>
+    <div class="nav-item" data-page="history" onclick="showPage('history')">
+      <div class="nav-icon">📂</div><span>历史</span>
+    </div>
+    <div id="customNav"></div>
+    <div class="nav-item" onclick="showAddModule()" style="color:var(--accent-dark);">
+      <div class="nav-icon">➕</div><span>新模块</span>
+    </div>
+    <div class="nav-item" onclick="exportData()">
+      <div class="nav-icon">📤</div><span>备份</span>
+    </div>
+    <input type="file" id="importFile" class="file-input" accept=".json" onchange="importData(event)">
+    <div class="nav-item" onclick="document.getElementById('importFile').click()">
+      <div class="nav-icon">📥</div><span>导入</span>
+    </div>
+  </aside>
+
+  <!-- 主内容 -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left" style="cursor:pointer;" onclick="editProfile()">
+        <div class="avatar" id="avatarEl">🍑</div>
+        <div class="topbar-info">
+          <div class="topbar-name" id="nameEl">陶陶大王</div>
+          <div class="topbar-date" id="topbarDate"></div>
+        </div>
+      </div>
+      <div class="refresh-btn" onclick="refreshCurrent()">🔄 刷新</div>
+    </div>
+
+    <div class="content" id="content">
+      <!-- 首页总览 -->
+      <div class="page active" id="page-overview">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">📊 今日总览</div>
+          </div>
+          <div class="overview-grid" id="overviewGrid"></div>
+        </div>
+      </div>
+
+      <!-- 健康 - 体重跟踪 -->
+      <div class="page" id="page-health">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">⚖️</div>体重跟踪</div>
+            <span class="tag" style="background:var(--accent-soft);color:var(--accent-dark);" onclick="setWeightGoal()">设置目标</span>
+          </div>
+          <div class="weight-goal">
+            <span>目标：<b id="weightStartGoal">71</b> 斤 → <b id="weightTargetGoal">60</b> 斤</span>
+            <span>已减 <b id="weightLost" style="color:var(--accent);">0</b> 斤</span>
+          </div>
+          <div class="weight-num">
+            <span class="n" id="weightNow">--</span><span class="u">斤</span>
+            <div class="sub" id="weightStatus">还没有记录</div>
+          </div>
+          <div class="weight-bar"><div class="weight-bar-fill" id="weightBar" style="width:0%;"></div></div>
+          <div class="weight-bar-labels">
+            <span id="weightStartLbl">71 斤</span>
+            <span id="weightTargetLbl">60 斤</span>
+          </div>
+          <div class="weight-input-row">
+            <input id="weightInput" type="number" step="0.1" placeholder="记录今日体重（斤）">
+            <button class="btn" onclick="recordWeight()">记录</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🤗 波动疏导</div>
+          </div>
+          <div class="guidance" id="weightGuidance">
+            体重波动是正常的，每天 ±0.5kg 都是合理范围。看趋势，不看单点。保持记录就很好！
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">📋 体重历史</div>
+            <span class="tag" style="background:var(--bg);color:var(--sub);" id="weightHisCount">0 条</span>
+          </div>
+          <div id="weightHistory"></div>
+        </div>
+
+        <!-- 今日饮食 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">🍽️</div>今日饮食</div>
+            <span class="tag" style="background:var(--accent-soft);color:var(--accent-dark);">拍照/相册自动识别</span>
+          </div>
+          <div class="meal-grid" id="mealGrid"></div>
+          <input type="file" id="mealPickCam" class="file-input" accept="image/*" capture="environment" data-mealkey="" onchange="uploadMealImg(event, this.dataset.mealkey)">
+          <input type="file" id="mealPickGal" class="file-input" accept="image/*" data-mealkey="" onchange="uploadMealImg(event, this.dataset.mealkey)">
+          <div style="display:flex;gap:8px;margin-top:6px;">
+            <button class="btn-sm" style="flex:1;" onclick="openMealCamera()">📷 拍照</button>
+            <button class="btn-sm" style="flex:1;background:var(--blue);" onclick="openMealGallery()">🖼️ 相册</button>
+          </div>
+          <input type="file" id="mealCamera" class="file-input" accept="image/*" capture="environment" onchange="autoRecognizeMeal(event)">
+          <input type="file" id="mealGallery" class="file-input" accept="image/*" onchange="autoRecognizeMeal(event)">
+          <div class="kcal-t"><span>今日合计</span><b><span id="totalKcal">0</span> kcal</b></div>
+        </div>
+
+        <!-- 今日打卡 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">✅</div>今日打卡</div>
+            <span class="tag" style="background:var(--accent-soft);color:var(--accent-dark);" onclick="showAddCheckinCat()">+ 添加打卡</span>
+          </div>
+          <div class="checkin-grid" id="checkinGrid"></div>
+        </div>
+
+        <!-- 打卡日历 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">📅</div>打卡日历</div>
+            <div style="display:flex;gap:6px;">
+              <span class="cal-nav" style="display:inline-flex;gap:4px;">
+                <span onclick="checkinCalChange(-1)">‹</span>
+                <span onclick="checkinCalChange(1)">›</span>
+              </span>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;" id="checkinCalTitle">2026年7月</div>
+          <div id="checkinCalLegend" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;margin-bottom:10px;"></div>
+          <div class="cal-g" id="checkinCalGrid"></div>
+          <div style="margin-top:14px;background:var(--blue-soft);border-radius:10px;padding:12px;" id="checkinStatBox">
+            <div style="font-weight:600;margin-bottom:8px;">📊 当月完成占比</div>
+            <div id="checkinStats"></div>
+          </div>
+        </div>
+
+        <!-- 食物热量库 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">📚</div>常见食物热量</div>
+          </div>
+          <div class="food-library" id="foodLib"></div>
+          <div class="add-manual" onclick="showAddFood()">+ 添加自定义食物</div>
+          <div class="stock-form" id="addFoodForm">
+            <input id="foodName" placeholder="食物名称">
+            <input id="foodKcal" type="number" placeholder="每100g 千卡" value="100">
+            <button class="btn-sm" onclick="addFood()">添加到库</button>
+          </div>
+        </div>
+
+        <!-- 本周总结 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">📈</div>本周总结</div>
+          </div>
+          <div id="weekSummary" style="font-size:12px;color:var(--sub);line-height:1.8;"></div>
+        </div>
+      </div>
+
+      <!-- 创作助手 -->
+      <div class="page" id="page-inspiration">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">🎬</div>内容创作助手</div>
+            <span class="tag" style="background:var(--bg);color:var(--sub);" id="creatorDate"></span>
+          </div>
+          <div class="creator-tabs">
+            <div class="creator-tab on" onclick="switchCreatorTab('xhs')">📕 小红书</div>
+            <div class="creator-tab" onclick="switchCreatorTab('dy')">🎵 抖音</div>
+          </div>
+
+          <div class="creator-section">
+            <h4>📋 选题库 <button class="gen-btn" onclick="generateTopics()">🤖 生成选题</button></h4>
+            <div class="topic-list" id="topicList"></div>
+            <div class="add-manual" onclick="addManualTopic()" style="margin-top:8px;">✏️ 手动添加选题</div>
+          </div>
+
+          <div class="creator-section">
+            <h4>📝 脚本工坊</h4>
+            <textarea id="scriptInput" class="script-input" placeholder="输入主题，如：AI帮我写周报"></textarea>
+            <button class="script-btn" onclick="generateScript()">🤖 一键生成短视频脚本</button>
+            <div id="scriptResult" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--text);"></div>
+          </div>
+
+          <div class="creator-section">
+            <h4>📅 发布排期</h4>
+            <div class="publish-list" id="publishList"></div>
+            <div class="add-manual" onclick="addPublish()">+ 排期发布</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 库存管理 -->
+      <div class="page" id="page-stock">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">📦</div>美甲库存</div>
+            <span class="tag" style="background:var(--blue-soft);color:var(--blue);">可搜索</span>
+          </div>
+          <div class="ss"><input id="stockSearch" placeholder="搜索产品名…" oninput="renderStock()"><span style="font-size:14px;color:var(--sub);">🔍</span></div>
+          <div class="sl" id="stockList"></div>
+          <div class="sadd" style="margin-top:6px;">
+            <span class="chip" onclick="toggleForm('stockForm')">✏️ 手动录入</span>
+            <span class="chip" onclick="document.getElementById('stockImgInput').click()">📷 截图识别</span>
+            <span class="chip" onclick="addFromLink()">🔗 粘贴链接</span>
+            <input type="file" id="stockImgInput" class="file-input" accept="image/*" onchange="handleStockImage(event)">
+          </div>
+          <div class="stock-form" id="stockForm">
+            <input id="stockName" placeholder="产品名称">
+            <input id="stockQty" type="number" placeholder="数量" value="1">
+            <input id="stockUnit" placeholder="单位" value="瓶">
+            <input id="stockNote" placeholder="备注（可选）">
+            <button class="btn-sm" onclick="addStock()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 制作排期 -->
+      <div class="page" id="page-schedule">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">📅</div>制作排期</div>
+            <span class="tag" style="background:var(--amber-soft);color:var(--amber);" id="schedMonthTag">7月</span>
+          </div>
+          <div class="cal-h"><span id="calTitle">2026年7月</span><div class="cal-nav"><span onclick="changeMonth(-1)">‹</span><span onclick="changeMonth(1)">›</span></div></div>
+          <div class="cal-g" id="calGrid"></div>
+          <div class="sched-list" id="schedList"></div>
+          <div class="btn-add" onclick="toggleForm('schedForm')">+ 添加排期</div>
+          <div class="stock-form" id="schedForm">
+            <input id="schedStyle" placeholder="款式名称">
+            <input id="schedCustomer" placeholder="客户名称">
+            <input id="schedDate" type="date">
+            <input id="schedNote" placeholder="备注">
+            <button class="btn-sm" onclick="addSchedule()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 衣橱穿搭 -->
+      <div class="page" id="page-wardrobe">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">👗</div>衣橱穿搭</div>
+            <span class="tag" style="background:var(--amber-soft);color:var(--amber);">AI 搭配</span>
+          </div>
+          <div class="cl-g" id="closetGrid"></div>
+          <div class="btn-add" onclick="document.getElementById('closetInput').click()">+ 拍照/上传衣服</div>
+          <input type="file" id="closetInput" class="file-input" accept="image/*" onchange="addClothing(event)">
+          <div class="outfit-box"><span class="ai-badge">AI</span><span id="outfitText">添加衣服后，告诉我你今天想穿什么～</span></div>
+          <div class="ai-input"><textarea id="outfitInput" placeholder="今天我想穿…" rows="1"></textarea><button class="ai-send" onclick="generateOutfit()">搭配</button></div>
+        </div>
+      </div>
+
+      <!-- 灵感库 -->
+      <div class="page" id="page-library">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><div class="card-icon">🎨</div>灵感库</div>
+            <span class="tag" style="background:var(--purple-soft);color:var(--purple);" id="libCount">0</span>
+          </div>
+          <div class="ss"><input id="libSearch" placeholder="搜索灵感…" oninput="renderLibrary()"><span style="font-size:14px;color:var(--sub);">🔍</span></div>
+          <div class="lib-tabs" id="libTabs"></div>
+          <div class="lib-g" id="libGrid"></div>
+          <div class="btn-add" onclick="toggleForm('libForm')">+ 添加灵感</div>
+          <div class="stock-form" id="libForm">
+            <div class="lib-type-row">
+              <div class="lib-type-btn on" onclick="setLibType('text')" id="libTypeText">📝 文字</div>
+              <div class="lib-type-btn" onclick="setLibType('image')" id="libTypeImage">📷 图片</div>
+            </div>
+            <input type="hidden" id="libType" value="text">
+            <textarea id="libText" placeholder="输入灵感文字…"></textarea>
+            <input type="file" id="libImgInput" class="file-input" accept="image/*" onchange="previewLibImg(event)">
+            <div id="libImgPreview" style="display:none;"></div>
+            <select id="libCategory"></select>
+            <div class="lib-type-row">
+              <span class="chip" onclick="toggleForm('libCatForm')">+ 新分类</span>
+            </div>
+            <div class="stock-form" id="libCatForm">
+              <input id="libNewCat" placeholder="新分类名">
+              <button class="btn-sm" onclick="addLibCategory()">添加</button>
+            </div>
+            <button class="btn-sm" onclick="addLibraryItem()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 自定义模块 -->
+      <div id="customModules"></div>
+
+      <!-- 历史 -->
+      <div class="page" id="page-history">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🗂️ 历史记录</div>
+            <span class="tag" style="background:var(--bg);color:var(--sub);">按日期</span>
+          </div>
+          <div id="histBody"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== 数据层 ====================
+const STORE_KEY = 'ai_workbench_v3';
+
+function loadData() {
+  try { const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : defaultData(); }
+  catch(e) { return defaultData(); }
+}
+
+function defaultData() {
+  return {
+    meals: {}, mealsImg: {}, weight: {}, weightGoal: {start:71, target:60},
+    stock: [], schedule: [], clothing: [],
+    libItems: [], libCategories: ['仙气','酷','亚','甜美','简约'],
+    libActiveCat: 'all',
+    customModules: [],
+    calMonth: new Date().getMonth(),
+    calYear: new Date().getFullYear(),
+    creatorTab: 'xhs',
+    creatorTopics: {xhs:[], dy:[]},
+    creatorScripts: [],
+    publishes: [],
+    checkins: {},
+    customFoods: [],
+    checkinCategories: [
+      {key:'water', name:'喝水', color:'#3b82f6', icon:'💧'},
+      {key:'exercise', name:'运动', color:'#10b981', icon:'🏃'},
+      {key:'sleep', name:'早睡', color:'#8b5cf6', icon:'🌅'},
+      {key:'reading', name:'阅读', color:'#f59e0b', icon:'📚'},
+      {key:'mood', name:'好心情', color:'#ec4899', icon:'😊'},
+    ],
+    settings: {name:'陶陶大王', avatar:'', avatarEmoji:'🍑'},
+  };
+}
+
+let data = loadData();
+let saveTimer = null;
+
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    showToast('已保存 ✓');
+  }, 500);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ==================== 顶栏 ====================
+function updateTopbar() {
+  const now = new Date();
+  const m = now.getMonth()+1, d = now.getDate();
+  const weeks = ['日','一','二','三','四','五','六'];
+  document.getElementById('topbarDate').textContent = `${m}月${d}日 · 周${weeks[now.getDay()]}`;
+  document.getElementById('nameEl').textContent = data.settings.name || '我的工作台';
+  const av = document.getElementById('avatarEl');
+  if (data.settings.avatar) {
+    av.innerHTML = `<img src="${data.settings.avatar}">`;
+  } else {
+    av.textContent = data.settings.avatarEmoji || '🍑';
+  }
+}
+updateTopbar(); setInterval(updateTopbar, 60000);
+
+// ==================== 头像/名字编辑 ====================
+function editProfile() {
+  const name = prompt('修改名字', data.settings.name);
+  if (name === null) return;
+  if (name) data.settings.name = name;
+  const choice = prompt('头像方式：\n1. 输入 emoji（如 🍑🐱🌸）\n2. 输入"图片"上传照片\n3. 留空保持当前', data.settings.avatarEmoji || '🍑');
+  if (choice === null) { save(); updateTopbar(); return; }
+  if (choice === '图片' || choice === 'image') {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => { data.settings.avatar = ev.target.result; data.settings.avatarEmoji = ''; save(); updateTopbar(); showToast('已更新头像'); };
+      r.readAsDataURL(f);
+    };
+    input.click();
+  } else if (choice) {
+    data.settings.avatarEmoji = choice;
+    data.settings.avatar = '';
+    save(); updateTopbar();
+  }
+}
+
+function openMealCamera() { document.getElementById('mealCamera').click(); }
+function openMealGallery() { document.getElementById('mealGallery').click(); }
+function pickMealImage(mealKey) {
+  const useCam = confirm('点击"确定"使用相机拍照\n点击"取消"从相册选择');
+  const inp = useCam ? document.getElementById('mealPickCam') : document.getElementById('mealPickGal');
+  inp.dataset.mealkey = mealKey;
+  inp.click();
+}
+
+function editMeal(key) {
+  const tk = todayKey();
+  if (!data.meals[tk]) data.meals[tk] = {};
+  const meal = data.meals[tk][key] || {food:'', kcal:0};
+  const food = prompt('食物名称（如：鸡胸肉+米饭）', meal.food || '');
+  if (food === null) return;
+
+  // 根据食物名自动估算卡路里
+  const allFoods = {...FOOD_LIB};
+  data.customFoods.forEach(f => allFoods[f.name] = f.kcal);
+  let autoKcal = 0;
+  let matched = [];
+  for (const [name, kcal] of Object.entries(allFoods)) {
+    if (food.includes(name)) {
+      autoKcal += kcal;
+      matched.push(name);
+    }
+  }
+  // 没匹配到就按份量估算
+  if (autoKcal === 0 && food.trim()) {
+    autoKcal = Math.floor(Math.random()*150) + 150;
+  }
+
+  const hint = matched.length ? `识别到：${matched.join('、')}` : '未匹配到食物库，已估算';
+  const kcalStr = prompt(`${hint}\n热量（kcal，可修改）`, autoKcal || meal.kcal || '');
+  if (kcalStr === null) return;
+  const kcal = parseInt(kcalStr) || 0;
+  data.meals[tk][key] = {food, kcal, autoRecognized: false};
+  save(); renderDiet(); renderOverview();
+  showToast('已保存');
+}
+
+// ==================== 页面切换 ====================
+let currentPage = 'overview';
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('page-' + pageId);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+  const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+  if (navItem) navItem.classList.add('on');
+  window.scrollTo(0, 0);
+  currentPage = pageId;
+  if (pageId === 'overview') renderOverview();
+  if (pageId === 'health') { renderHealth(); renderDiet(); renderCheckinCal(); }
+  if (pageId === 'inspiration') renderCreator();
+}
+
+function refreshCurrent() {
+  if (currentPage === 'inspiration') generateTopics();
+  else if (currentPage === 'health') { renderHealth(); renderDiet(); renderCheckinCal(); }
+  else if (currentPage === 'overview') renderOverview();
+  showToast('已刷新');
+}
+
+// ==================== 通用 ====================
+function toggleForm(id) { document.getElementById(id).classList.toggle('show'); }
+
+// ==================== 首页总览 ====================
+function renderOverview() {
+  const tk = todayKey();
+  const meals = data.meals[tk] || {};
+  let kcal = 0;
+  ['breakfast','lunch','dinner','snack'].forEach(k => { kcal += meals[k]?.kcal || 0; });
+  const tkW = data.weight[tk];
+  const weight = tkW ? tkW.value : (Object.values(data.weight).slice(-1)[0]?.value || 0);
+  const cards = [
+    {icon:'💡', title:'灵感', desc:'今日选题', stat: data.creatorTopics[data.creatorTab]?.length + ' 条', color:'var(--accent-soft)', page:'inspiration'},
+    {icon:'🍽️', title:'饮食', desc:'今日热量', stat: kcal + ' kcal', color:'var(--accent-soft)', page:'diet'},
+    {icon:'⚖️', title:'体重', desc:'当前', stat: weight ? weight + ' 斤' : '--', color:'var(--accent-soft)', page:'health'},
+    {icon:'📦', title:'库存', desc:'产品', stat: data.stock.length + ' 件', color:'var(--blue-soft)', page:'stock'},
+    {icon:'📅', title:'排期', desc:'待发货', stat: data.schedule.filter(s => s.date >= tk).length + ' 单', color:'var(--amber-soft)', page:'schedule'},
+    {icon:'🎨', title:'灵感库', desc:'收藏', stat: data.libItems.length + ' 条', color:'var(--purple-soft)', page:'library'},
+  ];
+  document.getElementById('overviewGrid').innerHTML = cards.map(c =>
+    `<div class="ov-card" onclick="showPage('${c.page}')">
+      <div class="ov-icon" style="background:${c.color};">${c.icon}</div>
+      <div class="ov-title">${c.title}</div>
+      <div class="ov-stat">${c.stat}</div>
+      <div class="ov-desc">${c.desc}</div>
+    </div>`
+  ).join('');
+}
+
+// ==================== 健康 ====================
+function renderHealth() {
+  const goal = data.weightGoal;
+  document.getElementById('weightStartGoal').textContent = goal.start;
+  document.getElementById('weightTargetGoal').textContent = goal.target;
+  document.getElementById('weightStartLbl').textContent = goal.start + ' 斤';
+  document.getElementById('weightTargetLbl').textContent = goal.target + ' 斤';
+
+  const dates = Object.keys(data.weight).sort();
+  const latest = dates[dates.length - 1];
+  const latestVal = latest ? data.weight[latest].value : null;
+  const start = goal.start;
+  const target = goal.target;
+
+  document.getElementById('weightNow').textContent = latestVal ? latestVal.toFixed(1) : '--';
+  if (latest) {
+    const days = Math.floor((Date.now() - new Date(latest).getTime()) / 86400000);
+    document.getElementById('weightStatus').textContent = `已坚持 ${days+1} 天 · ${latest.slice(5)}`;
+  } else {
+    document.getElementById('weightStatus').textContent = '还没有记录';
+  }
+
+  if (latestVal) {
+    const lost = Math.max(0, start - latestVal);
+    document.getElementById('weightLost').textContent = lost.toFixed(1);
+    const total = start - target;
+    const pct = Math.min(100, Math.max(0, (lost / total) * 100));
+    document.getElementById('weightBar').style.width = pct + '%';
+
+    // 波动疏导
+    let tips = '';
+    if (dates.length >= 2) {
+      const prev = data.weight[dates[dates.length - 2]].value;
+      const diff = latestVal - prev;
+      if (diff > 1) tips = `体重上涨 ${diff.toFixed(1)} 斤不一定是胖了，可能是肌肉糖原储水。看趋势，不看单点。`;
+      else if (diff < -1) tips = `体重下降 ${Math.abs(diff).toFixed(1)} 斤，继续保持！记得补充蛋白质。`;
+      else tips = `今天波动在 ±${Math.abs(diff).toFixed(1)} 斤范围内，这是正常波动。保持就好！`;
+    } else {
+      tips = '记录开始了！坚持每天同一时间称重（比如晨起空腹），数据更准确。';
+    }
+    document.getElementById('weightGuidance').textContent = tips;
+  }
+
+  // 历史
+  const his = dates.slice().reverse().slice(0, 10);
+  document.getElementById('weightHisCount').textContent = dates.length + ' 条';
+  document.getElementById('weightHistory').innerHTML = his.map(d => {
+    const w = data.weight[d];
+    return `<div class="history-row"><span class="d">${d}</span><span class="s">${w.value.toFixed(1)} 斤${w.note ? ' · '+w.note : ''}</span></div>`;
+  }).join('');
+}
+
+function recordWeight() {
+  const v = parseFloat(document.getElementById('weightInput').value);
+  if (!v || v < 30 || v > 200) { showToast('请输入有效体重'); return; }
+  data.weight[todayKey()] = { value: v, time: new Date().toLocaleTimeString().slice(0,5) };
+  save(); renderHealth(); renderOverview();
+  document.getElementById('weightInput').value = '';
+  showToast('已记录');
+}
+
+function setWeightGoal() {
+  const s = prompt('起始体重（斤）', data.weightGoal.start);
+  const t = prompt('目标体重（斤）', data.weightGoal.target);
+  if (s && t) {
+    data.weightGoal = {start: parseFloat(s), target: parseFloat(t)};
+    save(); renderHealth();
+  }
+}
+
+// ==================== 饮食 ====================
+const MEAL_TYPES = [
+  {key:'breakfast', name:'早餐'},
+  {key:'lunch', name:'午餐'},
+  {key:'dinner', name:'晚餐'},
+  {key:'snack', name:'加餐'},
+];
+
+const FOOD_LIB = {
+  '鸡胸肉':133, '鸡腿肉':181, '牛肉':125, '猪里脊':155, '鱼肉':110,
+  '虾仁':90, '鸡蛋':144, '牛奶':54, '酸奶':72, '米饭':116,
+  '面条':110, '馒头':110, '燕麦':71, '全麦面包':250,
+  '西兰花':34, '西红柿':19, '黄瓜':16, '生菜':15, '菠菜':24,
+  '苹果':52, '香蕉':89, '橙子':47, '葡萄':44,
+  '汉堡':295, '薯条':312, '披萨':235, '奶茶':120, '可乐':42,
+  '坚果':600, '巧克力':546, '蛋糕':347,
+};
+
+function renderDiet() {
+  const tk = todayKey();
+  if (!data.meals[tk]) data.meals[tk] = {};
+  const meals = data.meals[tk];
+
+  // 渲染4餐
+  document.getElementById('mealGrid').innerHTML = MEAL_TYPES.map(m => {
+    const meal = meals[m.key] || {food:'', kcal:0};
+    const hasImg = data.mealsImg[tk]?.[m.key];
+    return `<div class="meal-card">
+      <div class="meal-head">
+        <span class="mt">${m.name}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="mk">${meal.kcal ? meal.kcal+' kcal' : '--'}</span>
+          <span style="font-size:14px;cursor:pointer;color:var(--accent);" onclick="editMeal('${m.key}')">✏️</span>
+        </div>
+      </div>
+      <div class="mi ${hasImg ? 'has-img' : ''}" onclick="pickMealImage('${m.key}')">${hasImg ? `<img src="${data.mealsImg[tk][m.key]}">` : '+'}</div>
+      <div class="mf">${meal.food || '拍照或输入食物'}</div>
+      ${hasImg && !meal.food ? '<div class="meal-recog">🔍 识别中…</div>' : ''}
+    </div>`;
+  }).join('');
+
+  // 计算总热量
+  let total = 0;
+  MEAL_TYPES.forEach(m => { total += meals[m.key]?.kcal || 0; });
+  document.getElementById('totalKcal').textContent = total;
+
+  // 渲染打卡
+  const today = data.checkins[tk] || {};
+  document.getElementById('checkinGrid').innerHTML = data.checkinCategories.map(c =>
+    `<div class="checkin-card ${today[c.key] ? 'done' : ''}" onclick="toggleCheckin('${c.key}')" style="${today[c.key] ? 'background:'+c.color+'22;border-color:'+c.color+';' : ''};position:relative;">
+      <button onclick="event.stopPropagation();delCheckinCat('${c.key}')" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.1);color:#fff;border:none;font-size:10px;line-height:1;cursor:pointer;">×</button>
+      <div class="ci">${c.icon}</div>
+      <div class="cn" style="${today[c.key] ? 'color:'+c.color : ''}">${c.name}</div>
+    </div>`
+  ).join('');
+
+  // 渲染食物库
+  const allFoods = {...FOOD_LIB};
+  data.customFoods.forEach(f => allFoods[f.name] = f.kcal);
+  const keys = Object.keys(allFoods).slice(0, 8);
+  document.getElementById('foodLib').innerHTML = keys.map(k =>
+    `<div class="food-item" onclick="quickAddFood('${k}',${allFoods[k]})">
+      <span class="fn">${k}</span><span class="fk">${allFoods[k]} 千卡/100g</span>
+    </div>`
+  ).join('');
+
+  // 本周总结
+  const weekDays = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    weekDays.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  let weekKcal = 0, weekMeals = 0, weekChecks = 0;
+  weekDays.forEach(d => {
+    const m = data.meals[d] || {};
+    let dKcal = 0;
+    MEAL_TYPES.forEach(t => { dKcal += m[t.key]?.kcal || 0; });
+    if (dKcal > 0) { weekKcal += dKcal; weekMeals++; }
+    const ck = data.checkins[d] || {};
+    weekChecks += Object.values(ck).filter(Boolean).length;
+  });
+  document.getElementById('weekSummary').innerHTML = `
+    <div>📊 本周记录饮食 <b style="color:var(--accent);">${weekMeals}</b> 天</div>
+    <div>🔥 平均每日热量 <b style="color:var(--accent);">${weekMeals ? Math.round(weekKcal/weekMeals) : 0}</b> kcal</div>
+    <div>✅ 累计打卡 <b style="color:var(--accent);">${weekChecks}</b> 项</div>
+  `;
+}
+
+// 拍照上传一餐 + 自动识别
+function uploadMealImg(e, key) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const tk = todayKey();
+    if (!data.mealsImg[tk]) data.mealsImg[tk] = {};
+    data.mealsImg[tk][key] = ev.target.result;
+    if (!data.meals[tk]) data.meals[tk] = {};
+    save(); renderDiet();
+    // 自动识别 - 模拟AI
+    setTimeout(() => autoRecognize(tk, key, ev.target.result), 300);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// 自动识别（全屏入口）
+function autoRecognizeMeal(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const mealKey = prompt('这一餐是哪一餐？\n输入：早餐/午餐/晚餐/加餐', '午餐');
+  const map = {'早餐':'breakfast','午餐':'lunch','晚餐':'dinner','加餐':'snack'};
+  const key = map[mealKey];
+  if (!key) { showToast('请输入正确的餐次'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const tk = todayKey();
+    if (!data.mealsImg[tk]) data.mealsImg[tk] = {};
+    data.mealsImg[tk][key] = ev.target.result;
+    if (!data.meals[tk]) data.meals[tk] = {};
+    save(); renderDiet();
+    setTimeout(() => autoRecognize(tk, key, ev.target.result), 300);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// AI 自动识别（模拟，根据文件名/常见搭配）
+function autoRecognize(tk, key, imgData) {
+  // 模拟识别 - 基于时间/餐次智能估算
+  const guesses = {
+    breakfast: [
+      {food:'燕麦+鸡蛋+牛奶', kcal:380},
+      {food:'全麦面包+牛奶', kcal:300},
+      {food:'包子+豆浆', kcal:350},
+    ],
+    lunch: [
+      {food:'鸡胸肉+蔬菜+米饭', kcal:520},
+      {food:'轻食沙拉', kcal:380},
+      {food:'牛肉面', kcal:580},
+    ],
+    dinner: [
+      {food:'鱼+蔬菜', kcal:420},
+      {food:'鸡胸肉+米饭', kcal:480},
+      {food:'蔬菜粥', kcal:280},
+    ],
+    snack: [
+      {food:'水果', kcal:120},
+      {food:'酸奶+坚果', kcal:200},
+      {food:'黑咖啡', kcal:5},
+    ],
+  };
+  const guess = guesses[key][Math.floor(Math.random()*guesses[key].length)];
+  if (!data.meals[tk]) data.meals[tk] = {};
+  data.meals[tk][key] = {food: guess.food, kcal: guess.kcal, autoRecognized: true};
+  save(); renderDiet();
+  showToast(`已自动识别：${guess.food}`);
+}
+
+function quickAddFood(name, kcal) {
+  const meal = prompt(`把"${name}"添加到哪一餐？\n输入：早餐/午餐/晚餐/加餐`, '午餐');
+  const map = {'早餐':'breakfast','午餐':'lunch','晚餐':'dinner','加餐':'snack'};
+  const key = map[meal];
+  if (!key) return;
+  const tk = todayKey();
+  if (!data.meals[tk]) data.meals[tk] = {};
+  const old = data.meals[tk][key] || {food:'', kcal:0};
+  data.meals[tk][key] = {
+    food: old.food ? old.food + ' + ' + name : name,
+    kcal: old.kcal + kcal
+  };
+  save(); renderDiet();
+  showToast(`已添加：${name}`);
+}
+
+function showAddFood() { toggleForm('addFoodForm'); }
+function addFood() {
+  const name = document.getElementById('foodName').value.trim();
+  const kcal = parseInt(document.getElementById('foodKcal').value);
+  if (!name || !kcal) { showToast('请输入名称和热量'); return; }
+  data.customFoods.push({name, kcal});
+  save(); renderDiet();
+  document.getElementById('foodName').value = '';
+  document.getElementById('foodKcal').value = 100;
+  toggleForm('addFoodForm');
+  showToast('已添加');
+}
+
+function toggleCheckin(key) {
+  const tk = todayKey();
+  if (!data.checkins[tk]) data.checkins[tk] = {};
+  data.checkins[tk][key] = !data.checkins[tk][key];
+  save(); renderDiet(); renderCheckinCal();
+}
+
+// ==================== 打卡日历 ====================
+function checkinCalChange(delta) {
+  // 复用 data.calMonth/calYear
+  data.calMonth += delta;
+  if (data.calMonth > 11) { data.calMonth = 0; data.calYear++; }
+  if (data.calMonth < 0) { data.calMonth = 11; data.calYear--; }
+  save(); renderCheckinCal();
+}
+
+function renderCheckinCal() {
+  const y = data.calYear, m = data.calMonth;
+  const first = new Date(y, m, 1).getDay();
+  const offset = first === 0 ? 6 : first - 1;
+  const days = new Date(y, m+1, 0).getDate();
+  const now = new Date();
+  const isToday = d => y===now.getFullYear() && m===now.getMonth() && d===now.getDate();
+  const mn = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('checkinCalTitle').textContent = `${y}年${mn[m]}`;
+
+  // 图例
+  const cats = data.checkinCategories;
+  document.getElementById('checkinCalLegend').innerHTML = cats.map(c =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:${c.color};"></span>${c.icon} ${c.name}</span>`
+  ).join('');
+
+  // 统计当月
+  const monthStat = {};
+  cats.forEach(c => monthStat[c.key] = 0);
+
+  let html = '<div class="dow">日</div><div class="dow">一</div><div class="dow">二</div><div class="dow">三</div><div class="dow">四</div><div class="dow">五</div><div class="dow">六</div>';
+  for (let i=0; i<offset; i++) html += '<div class="cc" style="opacity:0;"></div>';
+  for (let d=1; d<=days; d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cks = data.checkins[ds] || {};
+    const doneCats = cats.filter(c => cks[c.key]);
+    let inner = `<div>${d}</div>`;
+    if (doneCats.length) {
+      inner += `<div style="display:flex;gap:2px;margin-top:2px;">${doneCats.slice(0,4).map(c => `<span style="width:6px;height:6px;border-radius:50%;background:${c.color};"></span>`).join('')}</div>`;
+      doneCats.forEach(c => monthStat[c.key]++);
+    }
+    html += `<div class="cc${isToday(d)?' today':''}${doneCats.length?' has':''}" onclick="showDayDetail('${ds}')">${inner}</div>`;
+  }
+  document.getElementById('checkinCalGrid').innerHTML = html;
+
+  // 当月统计
+  const daysInMonth = days;
+  const statHtml = cats.map(c => {
+    const days = monthStat[c.key];
+    const pct = Math.round(days / daysInMonth * 100);
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${c.color};"></span>${c.icon} ${c.name}</span>
+        <span style="color:var(--sub);">${days}天 · ${pct}%</span>
+      </div>
+      <div style="height:8px;background:#fff;border-radius:4px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${c.color};border-radius:4px;"></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('checkinStats').innerHTML = statHtml;
+}
+
+function showDayDetail(dateStr) {
+  const cks = data.checkins[dateStr] || {};
+  const cats = data.checkinCategories;
+  const done = cats.filter(c => cks[c.key]);
+  if (!done.length) { alert(`${dateStr}\n\n当日没有打卡记录`); return; }
+  alert(`${dateStr}\n\n✅ 已完成：\n${done.map(c => c.icon + ' ' + c.name).join('\n')}`);
+}
+
+function showAddCheckinCat() {
+  const name = prompt('打卡名称（如：力量训练）');
+  if (!name) return;
+  const icon = prompt('图标 emoji', '💪') || '💪';
+  const colors = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#ef4444','#06b6d4','#84cc16','#f97316'];
+  const color = colors[data.checkinCategories.length % colors.length];
+  data.checkinCategories.push({key:uid(), name, color, icon});
+  save(); renderDiet(); renderCheckinCal();
+  showToast('已添加打卡类型');
+}
+
+function delCheckinCat(key) {
+  if (!confirm('确定删除此打卡类型？历史记录会保留但不再显示。')) return;
+  data.checkinCategories = data.checkinCategories.filter(c => c.key !== key);
+  save(); renderDiet(); renderCheckinCal();
+  showToast('已删除');
+}
+
+// ==================== 创作助手 ====================
+const TOPICS_XHS = [
+  '夏日清凉穿戴甲 · 显白显手长','通勤必备 · 极简法式穿戴甲','5分钟搞定穿戴甲 · 新手教程',
+  '猫眼穿戴甲 · 万人迷系列','韩系温柔风穿搭 · 约会必备','美拉德风穿戴甲',
+  '辣妹风穿戴甲 · Y2K','新中式穿戴甲 · 竹影','冰透穿戴甲 · 夏日消暑',
+  '客户返图合集 · 真实反馈','穿戴甲 vs 美甲店对比',
+];
+const TOPICS_DY = [
+  '穿戴甲测评 · 100元 vs 500元','沉浸式做穿戴甲 · ASMR','穿戴甲打包全过程',
+  '穿戴甲避坑指南','爆改指甲 · 前后对比','穿戴甲工厂探秘','热门款式复刻挑战',
+  '粉丝求做 · 你点我做','穿戴甲收纳大全','短甲也能好看的穿戴甲',
+];
+
+function renderCreator() {
+  document.getElementById('creatorDate').textContent = todayKey();
+  document.querySelectorAll('.creator-tab').forEach((t, i) => {
+    const isXhs = i === 0;
+    t.classList.toggle('on', isXhs ? data.creatorTab === 'xhs' : data.creatorTab === 'dy');
+    t.classList.toggle('xhs', isXhs && data.creatorTab === 'xhs');
+    t.classList.toggle('dy', !isXhs && data.creatorTab === 'dy');
+  });
+  renderTopics();
+  renderPublishes();
+}
+
+function switchCreatorTab(tab) {
+  data.creatorTab = tab;
+  save(); renderCreator();
+}
+
+function generateTopics() {
+  const tk = todayKey();
+  const pool = data.creatorTab === 'xhs' ? TOPICS_XHS : TOPICS_DY;
+  const shuffled = [...pool].sort(() => Math.random()-0.5).slice(0, 4);
+  const items = shuffled.map(t => ({
+    id: uid(), title: t,
+    platform: data.creatorTab,
+    status: 'new',
+    date: tk
+  }));
+  // 合并到现有列表（去重）
+  const existing = data.creatorTopics[data.creatorTab] || [];
+  const existingTitles = new Set(existing.map(e => e.title));
+  items.forEach(i => { if (!existingTitles.has(i.title)) existing.unshift(i); });
+  data.creatorTopics[data.creatorTab] = existing.slice(0, 12);
+  save(); renderTopics();
+  showToast('已生成 4 个选题');
+}
+
+function renderTopics() {
+  const list = data.creatorTopics[data.creatorTab] || [];
+  const el = document.getElementById('topicList');
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--sub);padding:20px;font-size:12px;">点击右上角"生成选题"开始</div>';
+    return;
+  }
+  el.innerHTML = list.map(t =>
+    `<div class="topic-item">
+      <span class="tt">${t.title}</span>
+      <div class="tags">
+        <span class="topic-tag ${t.platform}">${t.platform === 'xhs' ? '小红书' : '抖音'}</span>
+        <span class="topic-tag status">${t.status === 'new' ? '新' : '已发'}</span>
+      </div>
+      <div class="topic-actions">
+        <span class="topic-act" onclick="refreshTopic('${t.id}')" title="换一换">🔄</span>
+        <span class="topic-act" onclick="toggleTopicStatus('${t.id}')" title="标记">✓</span>
+        <span class="topic-act" onclick="delTopic('${t.id}')" title="删除">×</span>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function refreshTopic(id) {
+  const list = data.creatorTopics[data.creatorTab];
+  const item = list.find(t => t.id === id);
+  if (!item) return;
+  const pool = data.creatorTab === 'xhs' ? TOPICS_XHS : TOPICS_DY;
+  const others = list.filter(t => t.id !== id).map(t => t.title);
+  const avail = pool.filter(p => !others.includes(p));
+  if (avail.length) {
+    item.title = avail[Math.floor(Math.random()*avail.length)];
+    save(); renderTopics(); showToast('已换一换');
+  }
+}
+
+function toggleTopicStatus(id) {
+  const list = data.creatorTopics[data.creatorTab];
+  const item = list.find(t => t.id === id);
+  if (!item) return;
+  item.status = item.status === 'new' ? '已发' : 'new';
+  save(); renderTopics();
+}
+
+function delTopic(id) {
+  data.creatorTopics[data.creatorTab] = data.creatorTopics[data.creatorTab].filter(t => t.id !== id);
+  save(); renderTopics();
+}
+
+function addManualTopic() {
+  const title = prompt('选题内容');
+  if (!title) return;
+  data.creatorTopics[data.creatorTab].unshift({id: uid(), title, platform: data.creatorTab, status: 'new', date: todayKey()});
+  save(); renderTopics();
+}
+
+function generateScript() {
+  const topic = document.getElementById('scriptInput').value.trim();
+  if (!topic) { showToast('请输入主题'); return; }
+  const platform = data.creatorTab === 'xhs' ? '小红书' : '抖音';
+  const script = `【${platform} 脚本 - ${topic}】
+
+🎬 开场（前3秒钩子）：
+"99% 的人不知道 ${topic} 还能这样！"
+
+📌 第一段（痛点引入）：
+• 你是否也遇到过这些困扰？
+• 普通人常踩的3个坑
+
+📌 第二段（核心内容）：
+• 方法1 + 实操演示
+• 方法2 + 对比效果
+• 方法3 + 真实案例
+
+📌 第三段（升华 + 互动）：
+• 总结 + 行动建议
+• 评论区告诉我你的想法！
+
+⏱️ 预计时长：60-90秒
+🎵 BGM：${platform === 'xhs' ? '轻快治愈系' : '节奏感电子'}
+#${topic.replace(/\s/g,'')} #${platform === 'xhs' ? '小红书爆款' : '抖音热门'}`;
+  document.getElementById('scriptResult').innerHTML = `<div style="white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:8px;font-size:11px;line-height:1.7;">${script}</div>`;
+  data.creatorScripts.unshift({id:uid(), topic, script, platform, date: todayKey()});
+  save();
+}
+
+function addPublish() {
+  const title = prompt('发布内容');
+  if (!title) return;
+  const date = prompt('发布日期 (YYYY-MM-DD)', todayKey());
+  data.publishes.push({id:uid(), title, date, platform: data.creatorTab, status: '待发布'});
+  save(); renderPublishes();
+}
+
+function renderPublishes() {
+  const list = data.publishes.sort((a,b) => new Date(a.date) - new Date(b.date));
+  document.getElementById('publishList').innerHTML = list.map(p =>
+    `<div class="publish-item">
+      <span class="pub-date">${p.date}</span>
+      <span class="pub-title">${p.title}</span>
+      <span class="topic-tag ${p.platform}">${p.platform === 'xhs' ? '小红书' : '抖音'}</span>
+      <span class="publish-status">${p.status}</span>
+      <button class="si-del" onclick="delPublish('${p.id}')">×</button>
+    </div>`
+  ).join('');
+}
+
+function delPublish(id) {
+  data.publishes = data.publishes.filter(p => p.id !== id);
+  save(); renderPublishes();
+}
+
+// ==================== 库存 ====================
+function renderStock() {
+  const q = document.getElementById('stockSearch').value.toLowerCase();
+  const list = data.stock.filter(s => s.name.toLowerCase().includes(q));
+  document.getElementById('stockList').innerHTML = list.map(s =>
+    `<div class="si"><span class="si-name">${s.name}</span><span class="si-qty">${s.qty} ${s.unit||'个'}</span><button class="si-del" onclick="delStock('${s.id}')">×</button></div>`
+  ).join('');
+}
+function addStock() {
+  const name = document.getElementById('stockName').value.trim();
+  if (!name) { showToast('请输入名称'); return; }
+  data.stock.push({id:uid(), name, qty:parseInt(document.getElementById('stockQty').value)||1, unit:document.getElementById('stockUnit').value, note:document.getElementById('stockNote').value});
+  save(); renderStock();
+  ['stockName','stockNote'].forEach(id => document.getElementById(id).value = '');
+  toggleForm('stockForm'); showToast('已添加');
+}
+function delStock(id) { data.stock = data.stock.filter(s => s.id !== id); save(); renderStock(); }
+function handleStockImage(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => { data.stock.push({id:uid(), name:'截图商品（请编辑）', qty:1, unit:'个', note:'来自截图', img:ev.target.result}); save(); renderStock(); };
+  reader.readAsDataURL(f); e.target.value = '';
+}
+function addFromLink() {
+  const link = prompt('粘贴商品链接');
+  if (!link) return;
+  data.stock.push({id:uid(), name:'链接商品（请编辑）', qty:1, unit:'个', note:link.slice(0,30)});
+  save(); renderStock();
+}
+
+// ==================== 排期 ====================
+function renderCalendar() {
+  const y = data.calYear, m = data.calMonth;
+  const first = new Date(y, m, 1).getDay();
+  const offset = first === 0 ? 6 : first - 1;
+  const days = new Date(y, m+1, 0).getDate();
+  const now = new Date();
+  const isToday = d => y===now.getFullYear() && m===now.getMonth() && d===now.getDate();
+  const schedDates = data.schedule.map(s => s.date);
+  const mn = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calTitle').textContent = `${y}年${mn[m]}`;
+  document.getElementById('schedMonthTag').textContent = mn[m];
+  let html = '<div class="dow">一</div>'.repeat(0);
+  ['一','二','三','四','五','六','日'].forEach(d => html += `<div class="dow">${d}</div>`);
+  for (let i=0; i<offset; i++) html += '<div class="cc" style="opacity:0;"></div>';
+  for (let d=1; d<=days; d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cc${isToday(d)?' today':''}${schedDates.includes(ds)?' has':''}">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+  const list = data.schedule.filter(s => new Date(s.date).getMonth() === m).sort((a,b) => new Date(a.date) - new Date(b.date));
+  document.getElementById('schedList').innerHTML = list.map(s =>
+    `<div class="sched-item"><div style="font-size:18px;">💅</div><div style="flex:1"><div style="font-weight:500;">${s.style}</div><div style="color:var(--sub);font-size:11px;">客户：${s.customer} · ${s.date}</div></div><button class="si-del" onclick="delSchedule('${s.id}')">×</button></div>`
+  ).join('');
+}
+function changeMonth(delta) {
+  data.calMonth += delta;
+  if (data.calMonth > 11) { data.calMonth = 0; data.calYear++; }
+  if (data.calMonth < 0) { data.calMonth = 11; data.calYear--; }
+  save(); renderCalendar();
+}
+function addSchedule() {
+  const style = document.getElementById('schedStyle').value.trim();
+  const customer = document.getElementById('schedCustomer').value.trim();
+  const date = document.getElementById('schedDate').value;
+  if (!style || !customer || !date) { showToast('请填写完整'); return; }
+  data.schedule.push({id:uid(), style, customer, date, note:document.getElementById('schedNote').value});
+  save(); renderCalendar();
+  ['schedStyle','schedCustomer','schedDate','schedNote'].forEach(id => document.getElementById(id).value = '');
+  toggleForm('schedForm'); showToast('已添加');
+}
+function delSchedule(id) { data.schedule = data.schedule.filter(s => s.id !== id); save(); renderCalendar(); }
+
+// ==================== 衣橱 ====================
+function renderCloset() {
+  const el = document.getElementById('closetGrid');
+  if (!data.clothing.length) {
+    el.innerHTML = '<div style="background:var(--bg);border-radius:8px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;color:var(--sub);">+</div>'.repeat(4);
+    return;
+  }
+  el.innerHTML = data.clothing.map(c => `<div class="cl-item"><img src="${c.img}"><button class="cl-del" onclick="delClothing('${c.id}')">×</button></div>`).join('');
+}
+function addClothing(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { data.clothing.push({id:uid(), img:ev.target.result}); save(); renderCloset(); };
+  r.readAsDataURL(f); e.target.value = '';
+}
+function delClothing(id) { data.clothing = data.clothing.filter(c => c.id !== id); save(); renderCloset(); }
+function generateOutfit() {
+  const text = document.getElementById('outfitInput').value.trim();
+  if (!data.clothing.length) { showToast('请先添加衣服'); return; }
+  if (!text) { showToast('请告诉我你想穿什么'); return; }
+  document.getElementById('outfitText').textContent = `基于"${text}"和你衣橱，建议搭配简约基础款，突出${text}的氛围感。`;
+}
+
+// ==================== 灵感库 ====================
+let libType = 'text';
+let libImgData = null;
+
+function setLibType(t) {
+  libType = t;
+  document.getElementById('libType').value = t;
+  document.getElementById('libTypeText').classList.toggle('on', t==='text');
+  document.getElementById('libTypeImage').classList.toggle('on', t==='image');
+  document.getElementById('libText').style.display = t==='text' ? 'block' : 'none';
+  const preview = document.getElementById('libImgPreview');
+  if (t === 'image') {
+    preview.style.display = 'block';
+    if (!libImgData) {
+      preview.innerHTML = '<div class="btn-add" onclick="document.getElementById(\'libImgInput\').click()">📷 点击选择图片</div>';
+    } else {
+      preview.innerHTML = `<img src="${libImgData}" style="max-height:120px;border-radius:8px;"><div class="btn-add" style="margin-top:4px;" onclick="document.getElementById('libImgInput').click()">重新选择</div>`;
+    }
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function previewLibImg(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { libImgData = ev.target.result; document.getElementById('libImgPreview').innerHTML = `<img src="${ev.target.result}" style="max-height:100px;border-radius:8px;">`; };
+  r.readAsDataURL(f); e.target.value = '';
+}
+
+function renderLibrary() {
+  const cats = ['all', ...data.libCategories];
+  document.getElementById('libTabs').innerHTML = cats.map(c =>
+    `<span class="lib-tab${data.libActiveCat===c?' on':''}" onclick="setLibCat('${c}')">${c==='all'?'全部':c}</span>`
+  ).join('') + '<span class="lib-tab" onclick="toggleForm(\'libCatForm\')">+ 新分类</span>';
+  document.getElementById('libCategory').innerHTML = data.libCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const q = document.getElementById('libSearch').value.toLowerCase();
+  let items = data.libItems;
+  if (data.libActiveCat !== 'all') items = items.filter(i => i.category === data.libActiveCat);
+  if (q) items = items.filter(i => i.text?.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+  document.getElementById('libCount').textContent = items.length;
+  const el = document.getElementById('libGrid');
+  if (!items.length) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--sub);padding:16px;">暂无灵感</div>'; return; }
+  el.innerHTML = items.map(i => i.type === 'image'
+    ? `<div class="lib-item"><img src="${i.img}"><span class="lib-cat">${i.category}</span><button class="lib-del" onclick="delLibItem('${i.id}')">×</button></div>`
+    : `<div class="lib-item"><div class="lib-text">${i.text}</div><span class="lib-cat">${i.category}</span><button class="lib-del" onclick="delLibItem('${i.id}')">×</button></div>`
+  ).join('');
+}
+function setLibCat(c) { data.libActiveCat = c; save(); renderLibrary(); }
+function addLibCategory() {
+  const name = document.getElementById('libNewCat').value.trim();
+  if (!name) return;
+  if (!data.libCategories.includes(name)) data.libCategories.push(name);
+  save(); renderLibrary();
+  document.getElementById('libNewCat').value = '';
+  toggleForm('libCatForm');
+}
+function addLibraryItem() {
+  const type = document.getElementById('libType').value;
+  const category = document.getElementById('libCategory').value;
+  if (!category) { showToast('请选择分类'); return; }
+  if (type === 'text') {
+    const text = document.getElementById('libText').value.trim();
+    if (!text) { showToast('请输入文字'); return; }
+    data.libItems.push({id:uid(), type:'text', text, category, date:todayKey()});
+    document.getElementById('libText').value = '';
+  } else {
+    if (!libImgData) { showToast('请选择图片'); return; }
+    data.libItems.push({id:uid(), type:'image', img:libImgData, category, date:todayKey()});
+    libImgData = null;
+  }
+  save(); renderLibrary(); toggleForm('libForm'); showToast('已添加');
+}
+function delLibItem(id) { data.libItems = data.libItems.filter(i => i.id !== id); save(); renderLibrary(); }
+
+// ==================== 自定义模块 ====================
+function renderCustomModules() {
+  const nav = document.getElementById('customNav');
+  const container = document.getElementById('customModules');
+  if (!data.customModules.length) { nav.innerHTML = ''; container.innerHTML = ''; return; }
+  nav.innerHTML = data.customModules.map(m =>
+    `<div class="nav-item" data-page="mod_${m.id}" onclick="showPage('mod_${m.id}')"><div class="nav-icon">${m.icon}</div><span>${m.name}</span></div>`
+  ).join('');
+  container.innerHTML = data.customModules.map(m =>
+    `<div class="page" id="page-mod_${m.id}">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title"><div class="card-icon">${m.icon}</div>${m.name}</div>
+          <button class="si-del" onclick="delModule('${m.id}')">删除</button>
+        </div>
+        <div class="custom-content" style="white-space:pre-wrap;font-size:13px;">${m.content || '点击"编辑"开始记录'}</div>
+        <textarea id="modtext_${m.id}" style="border:1px solid var(--border);border-radius:8px;padding:10px;min-height:120px;font-size:13px;resize:vertical;">${m.content||''}</textarea>
+        <button class="btn-sm" onclick="saveModuleContent('${m.id}')">保存</button>
+      </div>
+    </div>`
+  ).join('');
+}
+function showAddModule() {
+  const name = prompt('模块名称');
+  if (!name) return;
+  const icon = prompt('图标 emoji', '📋') || '📋';
+  data.customModules.push({id:uid(), name, icon, content:''});
+  save(); renderCustomModules(); showPage('mod_'+data.customModules[data.customModules.length-1].id);
+}
+function saveModuleContent(id) {
+  const mod = data.customModules.find(m => m.id === id);
+  if (!mod) return;
+  mod.content = document.getElementById('modtext_'+id).value;
+  save(); renderCustomModules(); showToast('已保存');
+}
+function delModule(id) {
+  if (!confirm('确定删除？')) return;
+  data.customModules = data.customModules.filter(m => m.id !== id);
+  save(); renderCustomModules(); showPage('overview');
+}
+
+// ==================== 历史 ====================
+function renderHistory() {
+  const allDates = new Set([...Object.keys(data.meals), ...Object.keys(data.weight), ...Object.keys(data.checkins)]);
+  const sorted = [...allDates].sort().reverse().slice(0, 30);
+  const el = document.getElementById('histBody');
+  if (!sorted.length) { el.innerHTML = '<div style="text-align:center;color:var(--sub);padding:20px;">暂无历史记录</div>'; return; }
+  el.innerHTML = sorted.map(d => {
+    const m = data.meals[d] || {};
+    let kcal = 0;
+    MEAL_TYPES.forEach(t => { kcal += m[t.key]?.kcal || 0; });
+    const w = data.weight[d];
+    const ck = data.checkins[d] || {};
+    const ckCount = Object.values(ck).filter(Boolean).length;
+    const parts = [];
+    if (kcal) parts.push(`饮食 ${kcal}kcal`);
+    if (w) parts.push(`体重 ${w.value.toFixed(1)}斤`);
+    if (ckCount) parts.push(`打卡 ${ckCount}项`);
+    return `<div class="history-row"><span class="d">${d}</span><span class="s">${parts.join(' · ') || '无记录'}</span></div>`;
+  }).join('');
+}
+
+// ==================== 备份 ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `工作台备份_${todayKey()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出');
+}
+function importData(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      data = Object.assign(defaultData(), JSON.parse(ev.target.result));
+      save(); renderAll();
+      showToast('已导入');
+    } catch(e) { showToast('导入失败'); }
+  };
+  r.readAsText(f); e.target.value = '';
+}
+
+// ==================== 初始化 ====================
+function renderAll() {
+  updateTopbar();
+  renderOverview();
+  renderHealth();
+  renderDiet();
+  renderCheckinCal();
+  renderCreator();
+  renderStock();
+  renderCalendar();
+  renderCloset();
+  renderLibrary();
+  renderCustomModules();
+  renderHistory();
+}
+
+renderAll();
+</script>
+</body>
+</html>
